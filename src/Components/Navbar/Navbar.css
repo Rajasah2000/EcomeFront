@@ -1,0 +1,157 @@
+.top-bar {
+  z-index: 15;
+  border: none;
+  /* background-color: white; */
+  color:whitesmoke;
+  padding: 1rem 4rem;
+  background-color: whitesmoke;
+  color: var(--background-color);
+  border-bottom: 1px solid var(--background-color);
+}
+
+@media only screen and (max-width: 1305px) {
+  .top-bar {
+    flex-direction: row;
+    gap: 1rem;
+  }
+}
+
+@media only screen and (max-width: 1015px) {
+  .top-bar {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+.top-bar-brand-name {
+  cursor: pointer;
+  margin-right: 3rem;
+  color: var(--sky-blue);
+}
+
+.search-bar {
+  border: 1px solid var(--royal-blue);
+}
+
+.search-bar:active {
+  border: 1px solid var(--royal-blue);
+}
+
+.search-bar-input {
+  outline: none;
+  font-family: inherit;
+}
+
+#search-bar-btn {
+  border: none;
+  padding: 9.6px 9.6px 10px 9.6px;
+}
+
+.top-bar button {
+  background-color: var(--sky-blue);
+}
+
+.solid-primary-btn.navbar-login-btn {
+  background-color: rgb(48, 27, 239);
+  transition: none;
+}
+
+.top-bar button:hover {
+  background: var(--royal-blue)
+    radial-gradient(circle, transparent 1%, rgb(117, 146, 54) 1%) center/15000%;
+}
+
+.top-bar button:active {
+  background-color: rgb(244, 58, 232);
+  background-size: 100%;
+  transition: background 0s;
+}
+
+
+/* SearchContainer.css */
+
+.search-container {
+  display: flex;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+.search-input {
+  flex: 2; /* Adjust the flex value to increase or decrease the input width */
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  .search-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input {
+    margin-bottom: 10px;
+    flex: 1; /* Adjust the flex value for responsiveness in smaller screens */
+  }
+}
+
+
+/* //   */
+/* AuthButtons.css */
+
+.auth-buttons {
+  display: flex;
+    justify-content: space-between;
+    max-width: 400px;
+    margin: 0px auto;
+    padding: 5px 11px;
+    border-radius: 4px;
+    background-color: var(--sky-blue);
+}
+
+.sign-in-button,
+.logout-button {
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.logout-button svg {
+  margin-right: 5px;
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  .auth-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sign-in-button,
+  .logout-button {
+    margin-bottom: 10px;
+  }
+}
+.signIn {
+  margin: auto;
+  white-space: nowrap;
+  width: 100%;
+  text-align: left;
+  font-family: JioType,helvetica,arial,sans-serif;
+  font-weight: 700;
+  text-transform: none;
+  font-size: 1.4rem;
+  letter-spacing: -.08px;
+  line-height: 1.5;
+  color: var(--color-white);
+}
+
