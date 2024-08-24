@@ -13,6 +13,7 @@ import {
 import { BsShopWindow, BsFillBagFill } from "react-icons/bs";
 import { useUserContext } from "../../ContextSetup/ContextProvider";
 import Helper from "../../AuthService/Helper";
+import PageLoader from "../Loader/PageLoader";
 
 function Navbar() {
   const { userWishlist, dispatchUserWishlist } = useWishlist();
@@ -22,14 +23,16 @@ function Navbar() {
   const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
-  const { wishlistProduct, setWishlistProduct } = useUserContext();
+  const { wishlistProduct, setWishlistProduct, cartData,OrderData, setAllCartData, getAllCartData } = useUserContext();
   console.log("ggggggggggggggg",wishlistProduct);
   const { searchBarTerm, setSearchBarTerm } = useSearchBar();
 
   const status = localStorage.getItem("status");
 
 
-
+  useEffect(() => {
+    getAllCartData();
+  },[])
 
 
   useEffect(() => {
@@ -65,14 +68,18 @@ function Navbar() {
   }, [userWishlist, userCart]);
 
   function logoutUser() {
-    localStorage.removeItem("token");
-    dispatchUserWishlist({ type: "UPDATE_USER_WISHLIST", payload: [] });
-    dispatchUserCart({ type: "UPDATE_USER_CART", payload: [] });
-    dispatchUserOrders({ type: "UPDATE_USER_ORDERS", payload: [] });
+    localStorage.removeItem('token');
+    // dispatchUserWishlist({ type: 'UPDATE_USER_WISHLIST', payload: [] });
+    // dispatchUserCart({ type: 'UPDATE_USER_CART', payload: [] });
+    // dispatchUserOrders({ type: 'UPDATE_USER_ORDERS', payload: [] });
     setUserLoggedIn(false);
+    setAllCartData([]);
+    setWishlistProduct([]);
     localStorage.clear();
-    showToast("success", "", "Logged out successfully");
-    navigate('/login')
+    showToast('success', '', 'Logged out successfully');
+    // Refresh the current page
+ 
+    navigate('/login');
   }
 
   return (
@@ -218,7 +225,7 @@ function Navbar() {
           >
             <div className="icon-count-badge">
               <i className="fa fa-shopping-cart fa-x" aria-hidden="true"></i>
-              {userCart.length !== 0 && <span className="count-badge-x">{userCart.length}</span>}
+              {cartData?.length !== 0 && <span className="count-badge-x">{cartData?.length}</span>}
             </div>
           </button>
         </Link>
@@ -236,7 +243,7 @@ function Navbar() {
                   marginBottom: '4px',
                 }}
               />
-              {userOrders.length !== 0 && <span className="count-badge-x">{userOrders.length}</span>}
+              {OrderData.length !== 0 && <span className="count-badge-x">{OrderData.length}</span>}
             </div>
           </button>
         </Link>
@@ -252,6 +259,7 @@ function Navbar() {
                     )
                 } */}
       </div>
+      {/* <PageLoader /> */}
     </div>
   );
 }

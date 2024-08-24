@@ -11,6 +11,8 @@ import { CartContextProvider } from './Context/cart-context';
 import { OrdersContextProvider } from './Context/orders-context'
 import { SearchBarContextProvider } from './Context/search-bar-context'
 import ContextProvider from './ContextSetup/ContextProvider';
+import AppWithLoader from './Components/Loader/AppWithLoader';
+// import AppWithLoader from './Components/Loader/AppWithLoader';
 
 export { useProductAvailable } from "./Context/product-context"
 export { useGenre } from "./Context/genre-context"
@@ -56,7 +58,8 @@ ReactDOM.render(
                   <OrdersContextProvider>
                     <SearchBarContextProvider>
                       <ContextProvider>
-                        <App />
+                        <AppWithLoader /> 
+                        {/* <App /> */}
                       </ContextProvider>
                     </SearchBarContextProvider>
                   </OrdersContextProvider>

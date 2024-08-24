@@ -8,11 +8,13 @@ import { useParams } from "react-router-dom";
 import { useToast, useWishlist, useCart } from "../../index";
 import ReactImageMagnify from "react-image-magnify";
 import Helper from "../../AuthService/Helper";
+import { useUserContext } from "../../ContextSetup/ContextProvider";
 
 function ProductPage() {
   const navigate = useNavigate();
-
+    const userId = localStorage?.getItem('Id');
   const { dispatchUserWishlist } = useWishlist();
+    const { wishlistProduct,setWishlistProduct,  getAllCartData } = useUserContext();
   const { dispatchUserCart } = useCart();
   const { showToast } = useToast();
   const [singleProductData, setSingleProductData] = useState({});
@@ -24,6 +26,23 @@ function ProductPage() {
       GetsingleProduct(id);
     }
   }, [id]);
+
+  const fetchAllWishlistData = async userId => {
+    try {
+      const res = await Helper(`http://localhost:3004/api/admin/wishlist/${userId}`, 'GET');
+      console.log('Response:', res);
+      if (res && res.status) {
+        setWishlistProduct(res.data);
+      } else {
+        console.log('Error response:', res);
+        showToast('error', '', 'Unexpected response format');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showToast('error', '', 'Error to fetch item to wishlist. Please try again');
+    }
+  };
+
 
   const GetsingleProduct = async (id) => {
 
@@ -118,51 +137,75 @@ function ProductPage() {
   //   }
   // }
 
-  const addItemToWishlist = () => {
-    if (!localStorage?.getItem("token")) {
-      showToast("error", "", "Kindly login!");
-      navigate("/login");
+ const addItemToWishlist = async (event, productId) => {
+   event.preventDefault();
+   event.stopPropagation();
+
+   if (!localStorage?.getItem('token')) {
+     showToast('error', '', 'Kindly login!');
+     navigate('/login');
+   } else {
+    try {
+
+      let data = {
+        user_id: userId, // Ensure that userId is defined before this point
+        product_id: productId,
+      };
+
+      const res = await Helper('http://localhost:3004/api/admin/add-to-wishlist', 'POST', data);
+      if (res && res.status) {
+        showToast('success', '', res?.message);
+        fetchAllWishlistData(userId);
+        wishlistProduct();
+        if (selectedCategoryId) {
+          fetchProductCategoryWise(selectedCategoryId);
+        } else {
+          GetAllProduct();
+        }
+      } else {
+        showToast('error', '', res.message);
+      }
+    } catch (error) {
+      // showToast('error', '', 'Error to add item to wishlist. Please try again');
     }
-  };
+   }
+ };
 
-  async function addItemToCart() {
-    if (!localStorage?.getItem("token")) {
-      showToast("error", "", "Kindly login!");
-      navigate("/login");
-    }
-    // const token = localStorage.getItem("token");
 
-    // if (token) {
-    //   const user = jwt_decode(token);
+ async function addItemToCart(e,productData) {
+  console.log('juiu9iui9', productData);
+  
+  e.preventDefault();
+   const token = localStorage.getItem('token');
 
-    //   if (!user) {
-    //     localStorage.removeItem("token");
-    //     showToast("warning", "", "Kindly Login");
-    //     navigate("/login");
-    //   } else {
-    //     let cartUpdateResponse = await axios.patch(
-    //       "https://bookztron-server.vercel.app/api/cart",
-    //       {
-    //         productdetails,
-    //       },
-    //       {
-    //         headers: {
-    //           "x-access-token": localStorage.getItem("token"),
-    //         },
-    //       }
-    //     );
-    //     if (cartUpdateResponse.data.status === "ok") {
-    //       dispatchUserCart({
-    //         type: "UPDATE_USER_CART",
-    //         payload: cartUpdateResponse.data.user.cart,
-    //       });
-    //       showToast("success", "", "Item successfully added to cart");
-    //     }
-    //   }
-    // } else {
-    //   showToast("warning", "", "Kindly Login");
-    // }
-  }
+   if (token) {
+     const user = jwt_decode(token);
+
+     if (!user) {
+      // alert("jii")
+       localStorage.removeItem('token');
+       showToast('warning', '', 'Kindly Login');
+       navigate('/login');
+     } else {
+      // alert("jkjkj")
+       let data = {
+         user_id: userId,
+         product_id: productData?._id,
+       };
+       const res = await Helper(`http://localhost:3004/api/admin/add-to-cart`, 'POST', data);
+       if (res && res?.status) {
+         showToast('success', '', 'Item successfully added to cart');
+         getAllCartData();
+       } else {
+         showToast('error', '', 'Failed to  added to cart');
+       }
+     }
+   } else {
+     showToast('warning', '', 'Kindly Login');
+   }
+ }
+
+
 
   function ProductRating({ rating }) {
     const stars = [];
@@ -192,22 +235,22 @@ function ProductPage() {
                 width: 1200,
                 height: 1200,
               },
-              imageClassName: "bookcover-image",
-              enlargedImagePosition: "beside",
+              imageClassName: 'bookcover-image',
+              enlargedImagePosition: 'beside',
               enlargedImageContainerDimensions: {
-                width: "315%",
-                height: "100%",
+                width: '315%',
+                height: '100%',
               },
-              enlargedImageContainerClassName: "enlarged-image-container",
+              enlargedImageContainerClassName: 'enlarged-image-container',
               enlargedImageStyle: {
-                filter: "blur(0px) brightness(1)",
+                filter: 'blur(0px) brightness(1)',
               },
             }}
           />
           <div className="item-details">
             <h2>{singleProductData?.name}</h2>
             <hr />
-            <p style={{ display: "flex" }}>
+            <p style={{ display: 'flex' }}>
               <b>Rating :</b>&nbsp;&nbsp;
               {/* <span>{singleProductData?.ratings}</span> */}
               <ProductRating rating={singleProductData?.ratings} />
@@ -223,17 +266,13 @@ function ProductPage() {
             <h3 className="item-price-details">
               Rs. {singleProductData?.price}&nbsp;&nbsp;
               <del>
-                Rs.{" "}
+                Rs.{' '}
                 {Math.round(
-                  (singleProductData?.price * singleProductData?.percentOff) /
-                    100 +
-                    singleProductData?.price
+                  (singleProductData?.price * singleProductData?.percentOff) / 100 + singleProductData?.price
                 )}
               </del>
               &nbsp;&nbsp;
-              <span className="discount-on-item">
-                ({singleProductData?.percentOff}% off)
-              </span>
+              <span className="discount-on-item">({singleProductData?.percentOff}% off)</span>
             </h3>
             {/* {outOfStock ? (
               <p className="out-of-stock-text">
@@ -241,10 +280,10 @@ function ProductPage() {
               </p>
             ) : ( */}
             <div className="item-buttons">
-              <button onClick={addItemToWishlist} className="solid-primary-btn">
+              <button onClick={e => addItemToWishlist(e, singleProductData?._id)} className="solid-primary-btn">
                 Add to wishlist
               </button>
-              <button onClick={addItemToCart} className="solid-warning-btn">
+              <button onClick={e => addItemToCart(e, singleProductData)} className="solid-warning-btn">
                 Add to cart
               </button>
             </div>

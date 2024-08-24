@@ -65,8 +65,9 @@
     flex-direction: column;
     justify-content: space-between;
     max-width: 28.14rem;
-    height: 25.2rem;
-    padding: 0 0 0 0;
+    height: 26.2rem;
+    /* margin: "10px"; */
+    padding: 4px 0 0 13px;
 }
 
 .cart-quantity-para

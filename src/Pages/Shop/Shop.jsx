@@ -137,9 +137,9 @@ function Shop(props) {
     try {
       const res = await Helper(`http://localhost:3004/api/admin/wishlist/${userId}`, 'GET');
       if (res && res.status) {
-        const filterData = res?.data?.filter(ele => ele?.user_id === userId && ele?.product_id === productId);
+        const filterData = res?.data?.filter(ele => ele?.user_id === userId && ele?.wishlistProductdata?._id === productId);
 
-        console.log('jkfjkjjkljkljjl', filterData[0]?._id);
+        console.log('jkfjkjjkljkljjl',productId, filterData,res, filterData[0]?._id);
         return filterData[0]?._id;
       } else {
         showToast('error', '', res.message);
@@ -215,9 +215,12 @@ function Shop(props) {
     }
     try {
       const wislistId = await getWishlistProductId(productId);
+      console.log("hgfghfjdhgjfd",wislistId);
+    
+      
       const res = await Helper(`http://localhost:3004/api/admin/remove-from-wishlist/${wislistId}`, 'DELETE');
       if (res && res.status) {
-        showToast('error', '', res?.message);
+        showToast('success', '', res?.message);
         fetchAllWishlistData(userId);
         if (selectedCategoryId) {
           fetchProductCategoryWise(selectedCategoryId);
@@ -332,68 +335,69 @@ function Shop(props) {
               </>
             ) : (
               // .sort(() => Math.random() - 0.5)
-              currentProductsAvailableList?.map(ele => {
-                return (
-                  <div
-                    style={{ marginTop: '12px' }}
-                    // onClick={alert("jodd")}
-                  >
+              currentProductsAvailableList
+                ?.map(ele => {
+                  return (
                     <div
-                      onClick={() => {
-                        navigate(`/single-product/${ele?._id}`);
-                      }}
-                      rel="noopener noreferrer"
+                      style={{ marginTop: '12px' }}
+                      // onClick={alert("jodd")}
                     >
-                      <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
-                   
-                        <img src={ele?.images} />
-                        <div className="card-item-details">
-                          <div className="item-title">
-                            <h4>{addEllipsisAfter4Words(ele?.name)}</h4>
-                          </div>
-                          <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
-                          <p>
-                            <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
-                            <del>Rs. {Math.round((ele?.price * ele?.percentOff) / 100 + ele?.price)}</del> &nbsp;&nbsp;
-                            <span className="discount-on-card" style={{ fontSize: '12px' }}>
-                              ({ele?.percentOff}% off)
-                            </span>
-                          </p>
-                          <div className="card-button">
-                            {ele?.iswishlisted ? (
-                              <button
-                                onClick={event => {
-                                  RemoveItemToWishlist(event, ele?._id);
-                                }}
-                                className={` card-icon-btn
+                      <div
+                        onClick={() => {
+                          navigate(`/single-product/${ele?._id}`);
+                        }}
+                        rel="noopener noreferrer"
+                      >
+                        <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
+                          <img src={ele?.images} />
+                          <div className="card-item-details">
+                            <div className="item-title">
+                              <h4>{addEllipsisAfter4Words(ele?.name)}</h4>
+                            </div>
+                            <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
+                            <p>
+                              <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
+                              <del>Rs. {Math.round((ele?.price * ele?.percentOff) / 100 + ele?.price)}</del>{' '}
+                              &nbsp;&nbsp;
+                              <span className="discount-on-card" style={{ fontSize: '12px' }}>
+                                ({ele?.percentOff}% off)
+                              </span>
+                            </p>
+                            <div className="card-button">
+                              {ele?.iswishlisted ? (
+                                <button
+                                  onClick={event => {
+                                    RemoveItemToWishlist(event, ele?._id);
+                                  }}
+                                  className={` card-icon-btn
                                   added-to-wishlist-btn
                                   outline-card-secondary-btn`}
-                              >
-                                <i className={`fa fa-x fa-heart`} aria-hidden="true"></i>
-                              </button>
-                            ) : (
-                              <button
-                                onClick={event => {
-                                  AddItemToWishlist(event, ele?._id);
-                                }}
-                                className={`card-icon-btn add-to-wishlist-btn outline-card-secondary-btn`}
-                              >
-                                <i className={`fa fa-x fa-heart-o`} aria-hidden="true"></i>
-                              </button>
-                            )}
-                          </div>
-                          <div className="badge-on-card">Deals</div>
-                          {/* {outOfStock && (
+                                >
+                                  <i className={`fa fa-x fa-heart`} aria-hidden="true"></i>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={event => {
+                                    AddItemToWishlist(event, ele?._id);
+                                  }}
+                                  className={`card-icon-btn add-to-wishlist-btn outline-card-secondary-btn`}
+                                >
+                                  <i className={`fa fa-x fa-heart-o`} aria-hidden="true"></i>
+                                </button>
+                              )}
+                            </div>
+                            <div className="badge-on-card">Deals</div>
+                            {/* {outOfStock && (
                     <div className="card-text-overlay-container">
                       <p>Out of Stock</p>
                     </div>
                   )} */}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })
             )}
           </div>
           {/* <Pagination

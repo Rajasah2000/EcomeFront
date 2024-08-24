@@ -8,11 +8,16 @@ import {
     useWishlist,
     useCart
 } from '../../index'
+import Helper from '../../AuthService/Helper';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+import { useUserContext } from '../../ContextSetup/ContextProvider';
 
-const WishlistProductCard = ({key, productdetails}) => {
+const WishlistProductCard = ({ key, productdetails, getAlllWishlistData }) => {
   const navigate = useNavigate();
   console.log('productdetails', productdetails);
   const { userWishlist, dispatchUserWishlist } = useWishlist();
+  const { wishlistProduct, setWishlistProduct, getAllCartData } = useUserContext();
   const { dispatchUserCart } = useCart();
   const { showToast } = useToast();
   const {
@@ -43,6 +48,13 @@ const WishlistProductCard = ({key, productdetails}) => {
       setWishlistBtn('add-to-wishlist-btn');
     }
   }, [userWishlist, productdetails._id, setWishlistHeartIcon, setWishlistBtn]);
+
+  // aos animation
+  useEffect(() => {
+    AOS.init();
+    AOS.refresh();
+  }, []);
+  const userId = localStorage?.getItem('Id');
 
   async function addOrRemoveItemToWishlist() {
     if (wishlistHeartIcon === 'fa-heart-o' && wishlistBtn === 'add-to-wishlist-btn') {
@@ -115,19 +127,19 @@ const WishlistProductCard = ({key, productdetails}) => {
     }
   }
 
-    function addEllipsisAfter4Words(text) {
-      const words = text.split(' ');
-      let result = '';
-      for (let i = 0; i < Math.min(words.length, 3); i++) {
-        result += words[i] + ' ';
-      }
-      if (words.length > 3) {
-        result += '...';
-      }
-      return result.trim();
+  function addEllipsisAfter4Words(text) {
+    const words = text.split(' ');
+    let result = '';
+    for (let i = 0; i < Math.min(words.length, 3); i++) {
+      result += words[i] + ' ';
     }
+    if (words.length > 3) {
+      result += '...';
+    }
+    return result.trim();
+  }
 
-  async function addItemToCart() {
+  async function addItemToCart(productData) {
     const token = localStorage.getItem('token');
 
     if (token) {
@@ -138,20 +150,16 @@ const WishlistProductCard = ({key, productdetails}) => {
         showToast('warning', '', 'Kindly Login');
         navigate('/login');
       } else {
-        let cartUpdateResponse = await axios.patch(
-          'https://bookztron-server.vercel.app/api/cart',
-          {
-            productdetails,
-          },
-          {
-            headers: {
-              'x-access-token': localStorage.getItem('token'),
-            },
-          }
-        );
-        if (cartUpdateResponse.data.status === 'ok') {
-          dispatchUserCart({ type: 'UPDATE_USER_CART', payload: cartUpdateResponse.data.user.cart });
+        let data = {
+          user_id: productData?.user_id,
+          product_id: productData?.wishlistProductdata?._id,
+        };
+        const res = await Helper(`http://localhost:3004/api/admin/add-to-cart`, 'POST', data);
+        if (res && res?.status) {
           showToast('success', '', 'Item successfully added to cart');
+          getAllCartData();
+        } else {
+          showToast('error', '', 'Failed to  added to cart');
         }
       }
     } else {
@@ -159,63 +167,96 @@ const WishlistProductCard = ({key, productdetails}) => {
     }
   }
 
-   const AddItemToWishlist = async (event, productId) => {
-     event.preventDefault();
-     event.stopPropagation();
-     if (!localStorage?.getItem('token')) {
-       showToast('error', '', 'Kindly login!');
-       navigate('/login');
-     } else {
-       try {
-         let data = {
-           user_id: userId,
-           product_id: productId,
-         };
+  const fetchAllWishlistData = async userId => {
+    try {
+      const res = await Helper(`http://localhost:3004/api/admin/wishlist/${userId}`, 'GET');
+      console.log('Response:', res);
+      if (res && res.status) {
+        setWishlistProduct(res.data);
+      } else {
+        console.log('Error response:', res);
+        showToast('error', '', 'Unexpected response format');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showToast('error', '', 'Error to fetch item to wishlist. Please try again');
+    }
+  };
 
-         const res = await Helper('http://localhost:3004/api/admin/add-to-wishlist', 'POST', data);
-         if (res && res.status) {
-           showToast('success', '', res?.message);
-           fetchAllWishlistData(userId);
-           if (selectedCategoryId) {
-             fetchProductCategoryWise(selectedCategoryId);
-           } else {
-             GetAllProduct();
-           }
-         } else {
-           showToast('error', '', res.message);
-         }
-       } catch (error) {
-         showToast('error', '', 'Error to add item to wishlist. Please try again');
-       }
-     }
-   };
+  const getWishlistProductId = async productId => {
+    try {
+      const res = await Helper(`http://localhost:3004/api/admin/wishlist/${userId}`, 'GET');
+      if (res && res.status) {
+        const filterData = res?.data?.filter(ele => ele?.user_id === userId && ele?.product_id === productId);
 
-   const RemoveItemToWishlist = async (event, productId) => {
-     event.preventDefault();
-     event.stopPropagation();
-     if (!localStorage?.getItem('token')) {
-       showToast('error', '', 'Kindly login!');
-       navigate('/login');
-     }
-     try {
-       const wislistId = await getWishlistProductId(productId);
-       const res = await Helper(`http://localhost:3004/api/admin/remove-from-wishlist/${wislistId}`, 'DELETE');
-       if (res && res.status) {
-         showToast('error', '', res?.message);
-         fetchAllWishlistData(userId);
-         if (selectedCategoryId) {
-           fetchProductCategoryWise(selectedCategoryId);
-         } else {
-           GetAllProduct();
-         }
-       } else {
-         showToast('error', '', res.message);
-       }
-       console.log('wislistId', wislistId);
-     } catch (error) {
-       showToast('error', '', 'Error to remove item to wishlist. Please try again');
-     }
-   };
+        return filterData[0]?._id;
+      } else {
+        showToast('error', '', res.message);
+      }
+    } catch (error) {
+      showToast('error', '', 'Error to fetch item to wishlist. Please try again');
+    }
+  };
+
+  const AddItemToWishlist = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!localStorage?.getItem('token')) {
+      showToast('error', '', 'Kindly login!');
+      navigate('/login');
+    } else {
+      try {
+        let data = {
+          user_id: userId,
+          product_id: productId,
+        };
+
+        const res = await Helper('http://localhost:3004/api/admin/add-to-wishlist', 'POST', data);
+        if (res && res.status) {
+          showToast('success', '', res?.message);
+          fetchAllWishlistData(userId);
+          if (selectedCategoryId) {
+            fetchProductCategoryWise(selectedCategoryId);
+          } else {
+            GetAllProduct();
+          }
+        } else {
+          showToast('error', '', res.message);
+        }
+      } catch (error) {
+        showToast('error', '', 'Error to add item to wishlist. Please try again');
+      }
+    }
+  };
+
+  const RemoveItemToWishlist = async (event, wishlistId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!localStorage?.getItem('token')) {
+      showToast('error', '', 'Kindly login!');
+      navigate('/login');
+    }
+
+    console.log('klijkjkjkl', wishlistId);
+
+    try {
+      const res = await Helper(`http://localhost:3004/api/admin/remove-from-wishlist/${wishlistId}`, 'DELETE');
+      if (res && res.status) {
+        showToast('success', '', res?.message);
+        fetchAllWishlistData(userId);
+        getAlllWishlistData();
+        if (selectedCategoryId) {
+          fetchProductCategoryWise(selectedCategoryId);
+        } else {
+          GetAllProduct();
+        }
+      } else {
+        showToast('error', '', res.message);
+      }
+    } catch (error) {
+      //  showToast('error', '', 'Error to remove item to wishlist. Please try again');
+    }
+  };
 
   return (
     // <Link
@@ -268,20 +309,17 @@ const WishlistProductCard = ({key, productdetails}) => {
     //   </div>
     // </Link>
 
-    <div
-      style={{ marginTop: '12px' }}
-      // onClick={alert("jodd")}
-    >
+    <div style={{ marginTop: '12px' }} data-aos="flip-left" data-aos-duration="3000">
       <div
-        onClick={() => {
-          navigate(`/single-product/${productdetails?._id}`);
-        }}
+        // onClick={() => {
+        //   // navigate(`/single-product/${productdetails?._id}`);
+        // }}
         rel="noopener noreferrer"
       >
         <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
           <img src={productdetails?.wishlistProductdata?.images} />
           <div className="card-item-details">
-            <div className="item-title" style={{ height: '1.68rem' }}>
+            <div className="item-title" style={{ height: '2.68rem' }}>
               <h4 style={{ margin: '1.2rem 0' }}>
                 {addEllipsisAfter4Words(productdetails?.wishlistProductdata?.name)}
               </h4>
@@ -356,7 +394,7 @@ const WishlistProductCard = ({key, productdetails}) => {
             onClick={event => {
               event.preventDefault();
               event.stopPropagation();
-              addItemToCart(event);
+              addItemToCart(productdetails);
             }}
           >
             Add to Cart

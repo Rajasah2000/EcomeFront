@@ -11,11 +11,18 @@ import {
 } from "../../index"
 import Lottie from 'react-lottie';
 import CartLottie from "../../Assets/Icons/cart.json"
+import Helper from "../../AuthService/Helper";
+import { useUserContext } from "../../ContextSetup/ContextProvider";
 
 function Cart()
 {
+    const userId = localStorage.getItem("Id")
     const { userWishlist, dispatchUserWishlist } = useWishlist()
     const { userCart, dispatchUserCart } = useCart()
+     
+    const {cartData ,
+           setAllCartData,
+           getAllCartData} = useUserContext();
     let cartObj = {
         loop: true,
         autoplay: true,
@@ -24,6 +31,15 @@ function Cart()
           preserveAspectRatio: 'xMidYMid slice'
         }
     }
+
+    useEffect(() => {
+      if(localStorage?.getItem("token")){
+         getAllCartData();
+      }
+     
+    },[])
+
+  
 
     useEffect(()=>{
         const token=localStorage.getItem('token')
@@ -66,40 +82,31 @@ function Cart()
         }   
     },[])
 
+    
+
     return (
-        <div className="cart-content-container">
-            <h2>{userCart.length} items in Cart</h2>
-            {
-                userCart.length === 0
-                ? (
-                    <div className="empty-cart-message-container">
-                            <Lottie options={cartObj}
-                                height={150}
-                                width={150}
-                                isStopped={false}
-                                isPaused={false}
-                            />
-                            <h2>Your cart is empty 🙃</h2>
-                            <Link to="/shop">
-                                <button className=" solid-primary-btn">Go to shop</button>
-                            </Link>
-                    </div>
-                )
-                : (
-                    <div className="cart-grid">
-                        <div className="cart-items-grid">
-                            {
-                                userCart.map( (productDetails, index)=>    
-                                    <HorizontalProductCard key={index} productDetails={productDetails}/>
-                                )
-                            }
-                        </div>
-                        <ShoppingBill/>
-                    </div>
-                )
-            }
-        </div>
-    )
+      <div className="cart-content-container">
+        <h2>{cartData.length} items in Cart</h2>
+        {cartData.length === 0 ? (
+          <div className="empty-cart-message-container">
+            <Lottie options={cartObj} height={150} width={150} isStopped={false} isPaused={false} />
+            <h2>Your cart is empty 🙃</h2>
+            <Link to="/shop">
+              <button className=" solid-primary-btn">Go to shop</button>
+            </Link>
+          </div>
+        ) : (
+          <div className="cart-grid">
+            <div className="cart-items-grid">
+              {cartData.map((productDetails, index) => (
+                <HorizontalProductCard key={index} productDetails={productDetails} />
+              ))}
+            </div>
+            <ShoppingBill />
+          </div>
+        )}
+      </div>
+    );
 }
 
 export { Cart }

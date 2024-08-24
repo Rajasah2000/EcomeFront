@@ -11,6 +11,7 @@ import {
   Footer,
   useWishlist,
   useCart,
+  useToast,
 } from "../../index.js";
 import { useProductAvailable } from "../../Context/product-context";
 import { useGenre } from "../../Context/genre-context";
@@ -22,13 +23,17 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import Banner2 from "../Banner/Banner2";
 import Helper from "../../AuthService/Helper.js";
+import { useUserContext } from "../../ContextSetup/ContextProvider.js";
 const LibraryIllustration = require("../../Assets/Images/bookstore5.jpg");
 
 function Home() {
   const { dispatchProductFilterOptions } = useProductAvailable();
   const { dispatchUserWishlist } = useWishlist();
   const { dispatchUserCart } = useCart();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+   const { showToast } = useToast();
+    const userId = localStorage?.getItem('Id');
+     const { wishlistProduct, setWishlistProduct, getAllCartData } = useUserContext();
   const {
     setFictionCategoryCheckbox,
     setThrillerCategoryCheckbox,
@@ -56,6 +61,101 @@ function Home() {
     ); // Unicode for "<"
   };
 
+ const AddItemToWishlist = async (event, productId) => {
+   event.preventDefault();
+   event.stopPropagation();
+
+   if (!localStorage?.getItem('token')) {
+     showToast('error', '', 'Kindly login!');
+     navigate('/login');
+   } else {
+     try {
+       let data = {
+         user_id: userId,
+         product_id: productId,
+       };
+
+       const res = await Helper('http://localhost:3004/api/admin/add-to-wishlist', 'POST', data);
+       console.log('Response received:', res && res?.status);
+       console.log('Status:', res?.status);
+
+       if (res && res?.status) {
+         showToast('success', '', res?.message);
+         fetchAllWishlistData(userId);
+         fetchAllTrendingProduct();
+       } else {
+         showToast('error', '', res?.message || 'Failed to add item to wishlist');
+       }
+     } catch (error) {
+       showToast('error', '', 'Error to add item to wishlist. Please try again');
+     }
+   }
+ };
+
+   const fetchAllWishlistData = async userId => {
+     try {
+       const res = await Helper(`http://localhost:3004/api/admin/wishlist/${userId}`, 'GET');
+       console.log('Response:', res);
+       if (res && res.status) {
+         setWishlistProduct(res.data);
+       } else {
+         console.log('Error response:', res);
+         showToast('error', '', 'Unexpected response format');
+       }
+     } catch (error) {
+       console.error('Error:', error);
+       showToast('error', '', 'Error to fetch item to wishlist. Please try again');
+     }
+   };
+
+    const getWishlistProductId = async productId => {
+      try {
+        const res = await Helper(`http://localhost:3004/api/admin/wishlist/${userId}`, 'GET');
+        if (res && res.status) {
+          const filterData = res?.data?.filter(
+            ele => ele?.user_id === userId && ele?.wishlistProductdata?._id === productId
+          );
+
+          // console.log('jkfjkjjkljkljjl', productId, filterData, res, filterData[0]?._id);
+          return filterData[0]?._id;
+        } else {
+          showToast('error', '', res.message);
+        }
+      } catch (error) {
+        showToast('error', '', 'Error to fetch item to wishlist. Please try again');
+      }
+    };
+
+
+  const RemoveItemToWishlist = async (event, productId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!localStorage?.getItem('token')) {
+      showToast('error', '', 'Kindly login!');
+      navigate('/login');
+    }
+    try {
+      const wislistId = await getWishlistProductId(productId);
+      console.log('hgfghfjdhgjfd', wislistId);
+
+      const res = await Helper(`http://localhost:3004/api/admin/remove-from-wishlist/${wislistId}`, 'DELETE');
+      if (res && res.status) {
+        showToast('success', '', res?.message);
+        fetchAllWishlistData(userId);
+        fetchAllTrendingProduct();
+        // if (selectedCategoryId) {
+        //   fetchProductCategoryWise(selectedCategoryId);
+        // } else {
+        //   GetAllProduct();
+        // }
+      } else {
+        showToast('error', '', res.message);
+      }
+      console.log('wislistId', wislistId);
+    } catch (error) {
+      showToast('error', '', 'Error to remove item to wishlist. Please try again');
+    }
+  };
   // Custom arrow component for "next" button
   const CustomNextArrow = (props) => {
     const { onClick } = props;
@@ -161,10 +261,7 @@ function Home() {
 
   const fetchAllTrendingProduct = async () => {
     try {
-      const res = await Helper(
-        "http://localhost:3004/api/admin/get-all-tranding-product",
-        "GET"
-      );
+      const res = await Helper('http://localhost:3004/api/admin/get-all-product', 'GET');
       if (res && res?.status) {
         console.log("fdfdsfsfds", res);
         setTrendingProduct(res?.data);
@@ -243,56 +340,63 @@ function Home() {
 
         <div className="slider-container" data-aos="fade-up" data-aos-duration="3000">
           <Slider {...settings}>
-            {trandingProduct?.map(ele => {
-              return (
-                <div style={{ marginTop: '12px' }}>
-                  <Link
-                    to={`/shop/`}
-                    // onClick={() =>
-                    // localStorage.setItem(`${_id}`, JSON.stringify(productdetails))
-                    // }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+            {trandingProduct
+              .sort(() => Math.random() - 0.5)
+              ?.map(ele => {
+                return (
+                  <div style={{ marginTop: '12px' }} key={ele?._id}>
                     <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
-                      <img src="https://media-ik.croma.com/prod/https://media.croma.com/image/upload/v1704795585/Croma%20Assets/Communication/Headphones%20and%20Earphones/Images/263445_0_uedz4h.png?tr=w-360" />
+                      <Link
+                        to={`/single-product/${ele?._id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="card-link"
+                      >
+                        <img src={ele?.images} alt={ele?.name} />
 
-                      {/* <img src="https://www.mxdindia.com/public/uploads/images/1695224257650b11c1cc025.41_20230919_211536_0003.png" /> */}
-
-                      <div className="card-item-details">
-                        <div className="item-title">
-                          <h4>{ele?.name}</h4>
+                        <div className="card-item-details">
+                          <div className="item-title">
+                            <h4>{ele?.name}</h4>
+                          </div>
+                          <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
+                          <p>
+                            <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
+                            <del>Rs. 500</del> &nbsp;&nbsp;
+                            <span className="discount-on-card">({ele?.percentOff}% off)</span>
+                          </p>
+                          <div className="badge-on-card">Deals</div>
                         </div>
-                        <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
-                        <p>
-                          <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
-                          <del>Rs. 500</del> &nbsp;&nbsp;
-                          <span className="discount-on-card">({ele?.percentOff}% off)</span>
-                        </p>
-                        <div className="card-button">
+                      </Link>
+
+                      <div className="card-button">
+                        {ele?.iswishlisted ? (
                           <button
                             onClick={event => {
                               event.preventDefault();
                               event.stopPropagation();
-                              // addOrRemoveItemToWishlist();
+                              RemoveItemToWishlist(event, ele?._id);
                             }}
-                            className={`card-icon-btn add-to-wishlist-btn outline-card-secondary-btn`}
+                            className="card-icon-btn added-to-wishlist-btn outline-card-secondary-btn"
                           >
-                            <i className={`fa fa-x fa-heart-o`} aria-hidden="true"></i>
+                            <i className="fa fa-heart" aria-hidden="true"></i>
                           </button>
-                        </div>
-                        <div className="badge-on-card">Deals</div>
-                        {/* {outOfStock && (
-                    <div className="card-text-overlay-container">
-                      <p>Out of Stock</p>
-                    </div>
-                  )} */}
+                        ) : (
+                          <button
+                            onClick={event => {
+                              // event.preventDefault();
+                              // event.stopPropagation();
+                              AddItemToWishlist(event, ele?._id);
+                            }}
+                            className="card-icon-btn add-to-wishlist-btn outline-card-secondary-btn"
+                          >
+                            <i className="fa fa-heart-o" aria-hidden="true"></i>
+                          </button>
+                        )}
                       </div>
                     </div>
-                  </Link>
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
           </Slider>
         </div>
       </div>
@@ -307,58 +411,74 @@ function Home() {
         }}
       >
         <h1 className="homepage-headings" style={{ padding: '2rem', backgroundColor: '#d4d5d6' }}>
-          Trending Smartphones
+          Trending Products
         </h1>
         <div className="slider-container" data-aos="fade-up" data-aos-duration="3000">
           <Slider {...settings}>
-            {trandingProduct?.map(ele => {
-              return (
-                <div style={{ marginTop: '12px' }}>
-                  <Link
-                    to={`/shop/`}
-                    // onClick={() =>
-                    // localStorage.setItem(`${_id}`, JSON.stringify(productdetails))
-                    // }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
-                      {/* <img src="https://media-ik.croma.com/prod/https://media.croma.com/image/upload/v1698384810/Croma%20Assets/Entertainment/Wireless%20Earbuds/Images/302477_wo2pp4.png" /> */}
-                      <img src="https://m.media-amazon.com/images/I/61WjZrbnqML._SL1500_.jpg" />
-                      <div className="card-item-details">
-                        <div className="item-title">
-                          <h4>{ele?.name}</h4>
-                        </div>
-                        <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
-                        <p>
-                          <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
-                          <del>Rs. 500</del> &nbsp;&nbsp;
-                          <span className="discount-on-card">({ele?.percentOff}% off)</span>
-                        </p>
-                        <div className="card-button">
-                          <button
-                            onClick={event => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              // addOrRemoveItemToWishlist();
-                            }}
-                            className={`card-icon-btn add-to-wishlist-btn outline-card-secondary-btn`}
-                          >
-                            <i className={`fa fa-x fa-heart-o`} aria-hidden="true"></i>
-                          </button>
-                        </div>
-                        <div className="badge-on-card">Deals</div>
-                        {/* {outOfStock && (
+            {trandingProduct
+              .sort(() => Math.random() - 0.5)
+              ?.map(ele => {
+                return (
+                  <div style={{ marginTop: '12px' }}>
+                    <Link
+                      to={`/single-product/${ele?._id}`}
+                      // onClick={() =>
+                      // localStorage.setItem(`${_id}`, JSON.stringify(productdetails))
+                      // }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
+                        {/* <img src="https://media-ik.croma.com/prod/https://media.croma.com/image/upload/v1698384810/Croma%20Assets/Entertainment/Wireless%20Earbuds/Images/302477_wo2pp4.png" /> */}
+                        {/* <img src="https://m.media-amazon.com/images/I/61WjZrbnqML._SL1500_.jpg" /> */}
+                        <img src={ele?.images} />
+                        <div className="card-item-details">
+                          <div className="item-title">
+                            <h4>{ele?.name}</h4>
+                          </div>
+                          <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
+                          <p>
+                            <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
+                            <del>Rs. 500</del> &nbsp;&nbsp;
+                            <span className="discount-on-card">({ele?.percentOff}% off)</span>
+                          </p>
+                          <div className="card-button">
+                            {ele?.iswishlisted ? (
+                              <button
+                                onClick={event => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  RemoveItemToWishlist(event, ele?._id);
+                                }}
+                                className="card-icon-btn added-to-wishlist-btn outline-card-secondary-btn"
+                              >
+                                <i className="fa fa-heart" aria-hidden="true"></i>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={event => {
+                                  // event.preventDefault();
+                                  // event.stopPropagation();
+                                  AddItemToWishlist(event, ele?._id);
+                                }}
+                                className="card-icon-btn add-to-wishlist-btn outline-card-secondary-btn"
+                              >
+                                <i className="fa fa-heart-o" aria-hidden="true"></i>
+                              </button>
+                            )}
+                          </div>
+                          <div className="badge-on-card">Deals</div>
+                          {/* {outOfStock && (
                     <div className="card-text-overlay-container">
                       <p>Out of Stock</p>
                     </div>
                   )} */}
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </div>
-              );
-            })}
+                    </Link>
+                  </div>
+                );
+              })}
           </Slider>
         </div>
       </div>
@@ -422,11 +542,87 @@ function Home() {
         </h1>
         <div className="slider-container" data-aos="fade-up" data-aos-duration="3000">
           <Slider {...settings}>
-            {trandingProduct?.map(ele => {
+            {trandingProduct
+              .sort(() => Math.random() - 0.5)
+              ?.map(ele => {
+                return (
+                  <div style={{ marginTop: '12px' }}>
+                    <Link
+                      to={`/single-product/${ele?._id}`}
+                      // onClick={() =>
+                      // localStorage.setItem(`${_id}`, JSON.stringify(productdetails))
+                      // }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
+                        {/* <img src="https://media-ik.croma.com/prod/https://media.croma.com/image/upload/v1632902449/Croma%20Assets/Entertainment/Headphones%20and%20Earphones/Images/243163_jlfkhe.png?tr=w-360" /> */}
+                        <img src={ele?.images} />
+                        <div className="card-item-details">
+                          <div className="item-title">
+                            <h4>{ele?.name}</h4>
+                          </div>
+                          <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
+                          <p>
+                            <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
+                            <del>Rs. 500</del> &nbsp;&nbsp;
+                            <span className="discount-on-card">({ele?.percentOff}% off)</span>
+                          </p>
+                          <div className="card-button">
+                            {ele?.iswishlisted ? (
+                              <button
+                                onClick={event => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  RemoveItemToWishlist(event, ele?._id);
+                                }}
+                                className="card-icon-btn added-to-wishlist-btn outline-card-secondary-btn"
+                              >
+                                <i className="fa fa-heart" aria-hidden="true"></i>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={event => {
+                                  // event.preventDefault();
+                                  // event.stopPropagation();
+                                  AddItemToWishlist(event, ele?._id);
+                                }}
+                                className="card-icon-btn add-to-wishlist-btn outline-card-secondary-btn"
+                              >
+                                <i className="fa fa-heart-o" aria-hidden="true"></i>
+                              </button>
+                            )}
+                          </div>
+                          <div className="badge-on-card">Deals</div>
+                          {/* {outOfStock && (
+                    <div className="card-text-overlay-container">
+                      <p>Out of Stock</p>
+                    </div>
+                  )} */}
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                );
+              })}
+          </Slider>
+        </div>
+      </div>
+
+      {/* <NewArrivals /> */}
+
+      <h1 className="homepage-headings" style={{ margin: '4rem' }}>
+        Best Selling Product
+      </h1>
+      <div className="slider-container" data-aos="fade-up" data-aos-duration="3000">
+        <Slider {...settings}>
+          {trandingProduct
+            .sort(() => Math.random() - 0.5)
+            ?.map(ele => {
               return (
                 <div style={{ marginTop: '12px' }}>
                   <Link
-                    to={`/shop/`}
+                    to={`/single-product/${ele?._id}`}
                     // onClick={() =>
                     // localStorage.setItem(`${_id}`, JSON.stringify(productdetails))
                     // }
@@ -434,7 +630,8 @@ function Home() {
                     rel="noopener noreferrer"
                   >
                     <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
-                      <img src="https://media-ik.croma.com/prod/https://media.croma.com/image/upload/v1632902449/Croma%20Assets/Entertainment/Headphones%20and%20Earphones/Images/243163_jlfkhe.png?tr=w-360" />
+                      {/* <img src="https://media-ik.croma.com/prod/https://media.croma.com/image/upload/v1697016359/Croma%20Assets/Entertainment/Wireless%20Earbuds/Images/300117_0_rlzacv.png?tr=w-400" /> */}
+                      <img src={ele?.images} />
                       <div className="card-item-details">
                         <div className="item-title">
                           <h4>{ele?.name}</h4>
@@ -446,16 +643,29 @@ function Home() {
                           <span className="discount-on-card">({ele?.percentOff}% off)</span>
                         </p>
                         <div className="card-button">
-                          <button
-                            onClick={event => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              // addOrRemoveItemToWishlist();
-                            }}
-                            className={`card-icon-btn add-to-wishlist-btn outline-card-secondary-btn`}
-                          >
-                            <i className={`fa fa-x fa-heart-o`} aria-hidden="true"></i>
-                          </button>
+                          {ele?.iswishlisted ? (
+                            <button
+                              onClick={event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                RemoveItemToWishlist(event, ele?._id);
+                              }}
+                              className="card-icon-btn added-to-wishlist-btn outline-card-secondary-btn"
+                            >
+                              <i className="fa fa-heart" aria-hidden="true"></i>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={event => {
+                                // event.preventDefault();
+                                // event.stopPropagation();
+                                AddItemToWishlist(event, ele?._id);
+                              }}
+                              className="card-icon-btn add-to-wishlist-btn outline-card-secondary-btn"
+                            >
+                              <i className="fa fa-heart-o" aria-hidden="true"></i>
+                            </button>
+                          )}
                         </div>
                         <div className="badge-on-card">Deals</div>
                         {/* {outOfStock && (
@@ -469,64 +679,6 @@ function Home() {
                 </div>
               );
             })}
-          </Slider>
-        </div>
-      </div>
-
-      {/* <NewArrivals /> */}
-
-      <h1 className="homepage-headings" style={{ margin: '4rem' }}>
-        Best Selling Product
-      </h1>
-      <div className="slider-container" data-aos="fade-up" data-aos-duration="3000">
-        <Slider {...settings}>
-          {trandingProduct?.map(ele => {
-            return (
-              <div style={{ marginTop: '12px' }}>
-                <Link
-                  to={`/shop/`}
-                  // onClick={() =>
-                  // localStorage.setItem(`${_id}`, JSON.stringify(productdetails))
-                  // }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <div className="card-basic" style={{ borderRadius: '1rem', padding: '12px' }}>
-                    <img src="https://media-ik.croma.com/prod/https://media.croma.com/image/upload/v1697016359/Croma%20Assets/Entertainment/Wireless%20Earbuds/Images/300117_0_rlzacv.png?tr=w-400" />
-                    <div className="card-item-details">
-                      <div className="item-title">
-                        <h4>{ele?.name}</h4>
-                      </div>
-                      <h5 className="item-author">{ele?.quantity} - &nbsp;Quantity</h5>
-                      <p>
-                        <b>Rs. {ele?.price} &nbsp;&nbsp;</b>
-                        <del>Rs. 500</del> &nbsp;&nbsp;
-                        <span className="discount-on-card">({ele?.percentOff}% off)</span>
-                      </p>
-                      <div className="card-button">
-                        <button
-                          onClick={event => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            // addOrRemoveItemToWishlist();
-                          }}
-                          className={`card-icon-btn add-to-wishlist-btn outline-card-secondary-btn`}
-                        >
-                          <i className={`fa fa-x fa-heart-o`} aria-hidden="true"></i>
-                        </button>
-                      </div>
-                      <div className="badge-on-card">Deals</div>
-                      {/* {outOfStock && (
-                    <div className="card-text-overlay-container">
-                      <p>Out of Stock</p>
-                    </div>
-                  )} */}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            );
-          })}
         </Slider>
       </div>
 
